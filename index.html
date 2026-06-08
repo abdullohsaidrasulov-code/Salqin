@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SALQIN — Ofitsiant</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{
+--bg:#f0f4fb;--surface:#fff;--surface2:#f0f4ff;--border:#dde3f0;
+--primary:#2563eb;--pl:#eff4ff;--ph:#1d4ed8;
+--danger:#ef4444;--success:#16a34a;
+--text:#1e293b;--muted:#94a3b8;
+--sh:0 1px 4px rgba(37,99,235,.07),0 4px 16px rgba(37,99,235,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',sans-serif;font-size:14px;height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
+::-webkit-scrollbar{width:3px;height:3px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+#loadingScreen{position:fixed;inset:0;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:14px;}
+.loader{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loader-text{font-size:.82rem;color:var(--muted);font-weight:500;}
+#appRoot{display:none;flex-direction:column;flex:1;overflow:hidden;}
+
+.top-nav{display:none;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;z-index:20;}
+.top-nav-inner{display:flex;align-items:center;padding:10px 14px;gap:8px;}
+.top-nav-title{font-weight:700;font-size:.9rem;color:var(--primary);flex:1;}
+
+.app-body{display:flex;flex:1;overflow:hidden;}
+
+.left-nav{width:54px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:6px;flex-shrink:0;}
+.nav-btn{width:38px;height:38px;border:none;background:transparent;color:var(--muted);cursor:pointer;border-radius:10px;font-size:18px;display:flex;align-items:center;justify-content:center;transition:.18s;}
+.nav-btn:hover{background:var(--pl);color:var(--primary);}
+.nav-btn.active{background:var(--primary);color:#fff;box-shadow:0 2px 8px rgba(37,99,235,.3);}
+
+.main-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+.tab-view{display:none;flex-direction:column;flex:1;overflow:hidden;}
+.tab-view.active{display:flex;}
+
+.tables-bar{padding:9px 12px;border-bottom:1px solid var(--border);display:flex;gap:7px;overflow-x:auto;background:var(--surface);flex-shrink:0;align-items:center;}
+.tables-bar::-webkit-scrollbar{height:2px;}
+.table-btn{background:transparent;border:1.5px solid var(--border);color:var(--muted);padding:7px 14px;border-radius:8px;font-size:.76rem;font-weight:600;cursor:pointer;transition:.18s;white-space:nowrap;flex-shrink:0;}
+.table-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--pl);}
+.table-btn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+.table-btn.has-items{border-color:var(--danger);color:var(--danger);}
+.table-btn.active.has-items{background:var(--danger);border-color:var(--danger);color:#fff;}
+.add-tbl{background:transparent;border:1.5px dashed var(--border);color:var(--muted);padding:7px 12px;border-radius:8px;font-size:1rem;cursor:pointer;flex-shrink:0;transition:.18s;line-height:1;}
+.add-tbl:hover{border-color:var(--primary);color:var(--primary);}
+
+.order-body{display:flex;flex:1;overflow:hidden;position:relative;}
+.menu-area{flex:1;overflow-y:auto;padding:14px 16px;min-width:0;padding-bottom:80px;}
+.cat-block{margin-bottom:22px;}
+.cat-label{font-size:.67rem;font-weight:700;letter-spacing:.12em;color:var(--primary);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.cat-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;}
+.menu-item{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:12px 9px;text-align:center;cursor:pointer;transition:.15s;user-select:none;position:relative;}
+.menu-item:hover{border-color:var(--primary);background:var(--pl);transform:translateY(-2px);box-shadow:0 4px 14px rgba(37,99,235,.1);}
+.menu-item:active{transform:translateY(0);}
+.item-qty-badge{position:absolute;top:5px;right:6px;background:var(--primary);color:#fff;font-size:.65rem;font-weight:700;padding:1px 6px;border-radius:10px;line-height:1.5;}
+.i-name{font-size:.8rem;font-weight:600;color:var(--text);margin-bottom:5px;line-height:1.3;}
+.i-price{font-size:.75rem;color:var(--primary);font-weight:700;}
+
+.side-panel{width:270px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;}
+.cart-hdr{padding:13px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+.cart-title{font-size:.8rem;font-weight:700;color:var(--primary);}
+.cart-count{background:var(--pl);color:var(--primary);font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:20px;}
+.cart-items{flex:1;overflow-y:auto;padding:9px;display:flex;flex-direction:column;gap:7px;}
+.cart-empty{text-align:center;color:var(--muted);font-size:.8rem;padding:34px 0;}
+.cart-item{background:var(--surface2);border:1.5px solid var(--border);border-radius:9px;padding:9px 11px;display:flex;justify-content:space-between;align-items:center;gap:7px;}
+.ci-name{font-size:.79rem;font-weight:600;}
+.ci-sub{font-size:.69rem;color:var(--muted);margin-top:2px;}
+.cart-acts{display:flex;align-items:center;gap:4px;flex-shrink:0;}
+.qty-btn{background:transparent;border:1.5px solid var(--border);color:var(--text);width:26px;height:26px;border-radius:6px;cursor:pointer;font-weight:700;font-size:.9rem;display:flex;align-items:center;justify-content:center;transition:.15s;}
+.qty-btn:hover{background:var(--primary);color:#fff;border-color:var(--primary);}
+.qty-num{font-size:.82rem;font-weight:700;min-width:18px;text-align:center;color:var(--primary);}
+.cart-foot{padding:13px 14px;border-top:1px solid var(--border);flex-shrink:0;}
+.total-line{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.total-lbl{font-size:.74rem;color:var(--muted);}
+.total-amt{font-size:1.05rem;font-weight:700;color:var(--primary);}
+.checkout-btn{width:100%;background:var(--primary);color:#fff;border:none;padding:12px;border-radius:9px;font-size:.84rem;font-weight:700;cursor:pointer;transition:.18s;font-family:inherit;}
+.checkout-btn:hover{background:var(--ph);}
+.checkout-btn:disabled{background:var(--border);color:var(--muted);cursor:not-allowed;}
+
+.cart-fab{display:none;position:fixed;bottom:calc(56px + 14px);right:16px;background:var(--primary);color:#fff;width:56px;height:56px;border-radius:50%;border:none;font-size:1.4rem;cursor:pointer;box-shadow:0 4px 20px rgba(37,99,235,.45);z-index:40;align-items:center;justify-content:center;transition:.2s;}
+.cart-fab:hover{transform:scale(1.08);}
+.cart-fab-badge{position:absolute;top:-2px;right:-2px;background:var(--danger);color:#fff;font-size:.62rem;font-weight:700;min-width:20px;height:20px;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid #fff;}
+
+.cart-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:45;}
+.cart-overlay.open{display:block;}
+.cart-drawer{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-radius:20px 20px 0 0;z-index:46;max-height:80dvh;display:flex;flex-direction:column;transform:translateY(100%);transition:.3s cubic-bezier(.4,0,.2,1);padding-bottom:max(16px,env(safe-area-inset-bottom));}
+.cart-drawer.open{transform:translateY(0);}
+.drawer-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 0;}
+.drawer-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+.drawer-title{font-size:.85rem;font-weight:700;color:var(--primary);}
+.drawer-close{background:transparent;border:none;font-size:1.2rem;color:var(--muted);cursor:pointer;padding:4px;}
+.drawer-items{overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:7px;flex:1;}
+.drawer-foot{padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0;}
+
+.hist-view{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+.hist-toolbar{padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:7px;flex-shrink:0;flex-wrap:wrap;}
+.flt-btn{background:transparent;border:1.5px solid var(--border);color:var(--muted);padding:6px 13px;border-radius:7px;font-size:.75rem;font-weight:600;cursor:pointer;transition:.18s;}
+.flt-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--pl);}
+.flt-btn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+.exp-btn{background:var(--success);color:#fff;border:none;padding:7px 14px;border-radius:7px;font-size:.75rem;font-weight:700;cursor:pointer;margin-left:auto;}
+.exp-btn:hover{background:#15803d;}
+.hist-body{flex:1;overflow-y:auto;padding:14px 16px;}
+.summary-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.sum-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 14px;box-shadow:var(--sh);}
+.sum-lbl{font-size:.67rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;}
+.sum-val{font-size:1rem;font-weight:700;color:var(--primary);}
+.htable-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--sh);}
+.htable{width:100%;border-collapse:collapse;font-size:.79rem;}
+.htable th{background:var(--bg);padding:9px 13px;text-align:left;font-size:.67rem;font-weight:700;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border);}
+.htable td{padding:9px 13px;border-bottom:1px solid var(--border);}
+.htable tr:last-child td{border-bottom:none;}
+.htable tr:hover td{background:var(--pl);cursor:pointer;}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.67rem;font-weight:700;background:var(--pl);color:var(--primary);}
+.amt{font-weight:700;color:var(--primary);}
+
+.admin-view{flex:1;overflow-y:auto;padding:18px 16px;}
+.adm-hdr{font-size:.67rem;font-weight:700;letter-spacing:.12em;color:var(--primary);text-transform:uppercase;margin-bottom:16px;}
+.adm-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+.adm-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--sh);}
+.adm-ct{font-size:.69rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:13px;}
+.fg{margin-bottom:9px;}
+.fl{font-size:.71rem;color:var(--muted);margin-bottom:4px;display:block;font-weight:500;}
+.fi{width:100%;background:var(--bg);border:1.5px solid var(--border);color:var(--text);padding:8px 10px;border-radius:7px;font-size:.81rem;outline:none;transition:.18s;font-family:inherit;}
+.fi:focus{border-color:var(--primary);background:var(--pl);}
+.fb{width:100%;padding:9px;background:var(--primary);color:#fff;border:none;border-radius:7px;font-weight:700;font-size:.81rem;cursor:pointer;transition:.18s;font-family:inherit;margin-top:6px;}
+.fb:hover{background:var(--ph);}
+.fb.danger{background:transparent;color:var(--danger);border:1.5px solid var(--danger);}
+.fb.danger:hover{background:var(--danger);color:#fff;}
+.fb.ghost{background:transparent;color:var(--muted);border:1.5px solid var(--border);}
+.fb.ghost:hover{color:var(--text);border-color:var(--text);}
+.adm-list{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;}
+.adm-li{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg);border-radius:7px;border:1px solid var(--border);}
+.adm-li-name{font-weight:600;font-size:.79rem;}
+.adm-li-sub{font-size:.69rem;color:var(--muted);margin-top:2px;}
+.del-btn{background:transparent;border:1.5px solid var(--border);color:var(--muted);width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;transition:.18s;flex-shrink:0;}
+.del-btn:hover{background:var(--danger);color:#fff;border-color:var(--danger);}
+.stat-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);}
+.stat-row:last-child{border-bottom:none;}
+.sk{font-size:.78rem;color:var(--muted);}
+.sv{font-size:.8rem;font-weight:700;color:var(--primary);}
+
+.modal{display:none;position:fixed;inset:0;background:rgba(30,41,59,.45);justify-content:center;align-items:center;z-index:200;backdrop-filter:blur(5px);padding:16px;overflow-y:auto;}
+.modal.open{display:flex;}
+.mbox{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:350px;max-height:90dvh;overflow-y:auto;padding:22px;box-shadow:0 8px 40px rgba(37,99,235,.15);margin:auto;}
+.rl{text-align:center;font-size:1.25rem;font-weight:800;color:var(--primary);margin-bottom:3px;}
+.rs{text-align:center;font-size:.71rem;color:var(--muted);margin-bottom:12px;}
+.rtl{font-size:.72rem;color:var(--muted);margin-bottom:7px;}
+.rhr{border:none;border-top:1px dashed var(--border);margin:10px 0;}
+.rrow{display:flex;justify-content:space-between;font-size:.79rem;padding:4px 0;word-break:break-word;}
+.rrow.tot{font-weight:800;color:var(--primary);font-size:.93rem;margin-top:3px;}
+.qr-wrap{display:flex;justify-content:center;margin:14px 0 8px;}
+.qr-wrap canvas{border-radius:10px;border:2px solid var(--border);}
+.mbtn{width:100%;margin-top:8px;padding:11px;border:none;border-radius:9px;font-weight:700;cursor:pointer;font-family:inherit;font-size:.81rem;transition:.18s;}
+.mbtn.success{background:var(--success);color:#fff;}
+.mbtn.success:hover{background:#15803d;}
+.mbtn.ghost{background:transparent;color:var(--muted);border:1.5px solid var(--border);}
+.mbtn.ghost:hover{color:var(--text);border-color:var(--text);}
+
+.pin-modal{display:none;position:fixed;inset:0;background:rgba(30,41,59,.55);justify-content:center;align-items:center;z-index:300;backdrop-filter:blur(6px);padding:16px;}
+.pin-modal.open{display:flex;}
+.pin-box{background:var(--surface);border-radius:18px;padding:28px 22px;width:100%;max-width:320px;box-shadow:0 8px 40px rgba(37,99,235,.2);}
+.pin-title{font-size:1rem;font-weight:700;color:var(--text);margin-bottom:5px;text-align:center;}
+.pin-sub{font-size:.76rem;color:var(--muted);margin-bottom:16px;text-align:center;line-height:1.5;}
+.pin-input-wrap{display:flex;gap:8px;margin-bottom:12px;}
+.pin-input{flex:1;background:var(--bg);border:1.5px solid var(--border);color:var(--text);padding:10px 14px;border-radius:9px;font-size:1rem;outline:none;font-family:inherit;transition:.18s;letter-spacing:2px;}
+.pin-input:focus{border-color:var(--primary);background:var(--pl);}
+.pin-go{background:var(--primary);color:#fff;border:none;padding:10px 18px;border-radius:9px;font-weight:700;cursor:pointer;font-size:.9rem;font-family:inherit;}
+.pin-numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+.pin-key{background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:13px;font-size:1.05rem;font-weight:700;cursor:pointer;transition:.15s;color:var(--text);font-family:inherit;}
+.pin-key:hover{background:var(--pl);border-color:var(--primary);color:var(--primary);}
+.pin-key:active{transform:scale(.95);}
+.pin-key.del{color:var(--danger);}
+.pin-key.empty{background:transparent;border-color:transparent;cursor:default;}
+.pin-err{color:var(--danger);font-size:.75rem;text-align:center;min-height:18px;margin-bottom:6px;}
+
+.bottom-nav{display:none;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;padding-bottom:max(4px,env(safe-area-inset-bottom));}
+.bottom-nav-inner{display:flex;}
+.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border:none;background:transparent;color:var(--muted);font-size:.68rem;font-weight:600;cursor:pointer;font-family:inherit;transition:.18s;}
+.bnav-btn span{font-size:1.3rem;}
+.bnav-btn.active{color:var(--primary);}
+
+@media(max-width:768px){
+.left-nav{display:none;}
+.top-nav{display:block;}
+.side-panel{display:none;}
+.cart-fab{display:flex;}
+.bottom-nav{display:block;}
+.adm-grid{grid-template-columns:1fr;}
+.summary-row{grid-template-columns:1fr 1fr;}
+.htable .hide-mob{display:none;}
+.menu-grid{grid-template-columns:repeat(auto-fill,minmax(95px,1fr));gap:7px;}
+.menu-area{padding-bottom:100px;}
+}
+@media(max-width:480px){
+.summary-row{grid-template-columns:1fr;}
+.tables-bar{padding:8px 10px;gap:5px;}
+.table-btn{padding:6px 11px;font-size:.73rem;}
+}
+</style>
+</head>
+<body>
+
+<div id="loadingScreen">
+<div class="loader"></div>
+<div class="loader-text">SALQIN yuklanmoqda...</div>
+</div>
+
+<div id="appRoot">
+<div class="top-nav">
+<div class="top-nav-inner">
+<span class="top-nav-title">🍽 SALQIN</span>
+<span id="mStolLabel" style="font-size:.75rem;color:var(--muted);font-weight:600;"></span>
+</div>
+</div>
+
+<div class="app-body">
+<div class="left-nav">
+<button class="nav-btn active" id="dNavOrder" onclick="switchTab('order')">🍽️</button>
+<button class="nav-btn" id="dNavHistory" onclick="switchTab('history')">📊</button>
+<button class="nav-btn" id="dNavAdmin" onclick="switchTab('admin')">⚙️</button>
+</div>
+
+<div class="main-panel">
+<div class="tab-view active" id="tabOrder">
+<div class="tables-bar" id="tablesBar"></div>
+<div class="order-body">
+<div class="menu-area" id="menuArea"></div>
+<div class="side-panel">
+<div class="cart-hdr">
+<div class="cart-title" id="dCartTitle">STOL №1</div>
+<span class="cart-count" id="dCartCount" style="display:none"></span>
+</div>
+<div class="cart-items" id="dCartItems"></div>
+<div class="cart-foot">
+<div class="total-line">
+<span class="total-lbl">JAMI</span>
+<span class="total-amt" id="dTotalAmt">0 so'm</span>
+</div>
+<button class="checkout-btn" id="dCheckoutBtn" onclick="openReceipt()" disabled>Chek yaratish</button>
+</div>
+</div>
+</div>
+</div>
+
+<div class="tab-view" id="tabHistory">
+<div class="hist-view">
+<div class="hist-toolbar">
+<button class="flt-btn active" id="fDay" onclick="setFilter('day')">Kunlik</button>
+<button class="flt-btn" id="fWeek" onclick="setFilter('week')">Haftalik</button>
+<button class="flt-btn" id="fMonth" onclick="setFilter('month')">Oylik</button>
+<button class="flt-btn" id="fAll" onclick="setFilter('all')">Hammasi</button>
+<button class="exp-btn" onclick="exportExcel()">⬇ Excel</button>
+</div>
+<div class="hist-body" id="histBody"></div>
+</div>
+</div>
+
+<div class="tab-view" id="tabAdmin">
+<div class="admin-view">
+<div class="adm-hdr">⚙️ Admin Panel</div>
+<div class="adm-grid">
+<div class="adm-card">
+<div class="adm-ct">Menyu boshqaruvi</div>
+<div class="fg">
+<label class="fl">Kategoriya</label>
+<input type="text" id="newCat" class="fi" placeholder="Yangi kategoriya">
+</div>
+<div class="fg">
+<label class="fl">Mahsulot nomi</label>
+<input type="text" id="newName" class="fi" placeholder="Nomini kiriting">
+</div>
+<div class="fg">
+<label class="fl">Narxi (so'm)</label>
+<input type="number" id="newPrice" class="fi" placeholder="0">
+</div>
+<button class="fb" onclick="addMenuItem()">✓ Qo'shish</button>
+<div style="margin-top:12px;font-size:.69rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;">Mavjud mahsulotlar</div>
+<div class="adm-list" id="adminMenuList"></div>
+</div>
+
+<div class="adm-card">
+<div class="adm-ct">Sozlamalar</div>
+<div class="fg">
+<label class="fl">Stollar soni</label>
+<div style="display:flex;gap:8px;">
+<input type="number" id="tableCount" class="fi" style="flex:1;margin:0;" min="1" max="30">
+<button class="fb" style="width:auto;margin:0;flex:0.5;" onclick="updateTableCount()">✓</button>
+</div>
+</div>
+<div class="stat-row" style="margin-top:14px;">
+<span class="sk">Bugun tayin</span>
+<span class="sv" id="curTblCnt">8</span>
+</div>
+<div class="fg" style="margin-top:12px;">
+<button class="fb ghost" onclick="changePinPrompt()">🔐 PIN o'zgartirish</button>
+<button class="fb danger" onclick="clearHistory()">🗑 Tarixni tozalash</button>
+</div>
+</div>
+
+<div class="adm-card" style="grid-column:1/-1;">
+<div class="adm-ct">📊 Statistika</div>
+<div id="statsBlock"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="bottom-nav">
+<div class="bottom-nav-inner">
+<button class="bnav-btn active" id="bNavOrder" onclick="switchTab('order')"><span>🍽️</span>Buyurtma</button>
+<button class="bnav-btn" id="bNavHistory" onclick="switchTab('history')"><span>📊</span>Tarix</button>
+<button class="bnav-btn" id="bNavAdmin" onclick="switchTab('admin')"><span>⚙️</span>Admin</button>
+</div>
+</div>
+</div>
+</div>
+
+<button class="cart-fab" id="cartFab" onclick="openDrawer()">
+🛒
+<span class="cart-fab-badge" id="cartBadge" style="display:none;"></span>
+</button>
+
+<div class="cart-overlay" id="cartOverlay" onclick="closeDrawer()"></div>
+<div class="cart-drawer" id="cartDrawer">
+<div class="drawer-handle"></div>
+<div class="drawer-hdr">
+<div class="drawer-title" id="drawerTitle">Savat</div>
+<button class="drawer-close" onclick="closeDrawer()">✕</button>
+</div>
+<div class="drawer-items" id="drawerItems"></div>
+<div class="drawer-foot">
+<div class="total-line">
+<span class="total-lbl">JAMI</span>
+<span class="total-amt" id="drawerTotal">0 so'm</span>
+</div>
+<button class="checkout-btn" id="drawerCheckoutBtn" onclick="openReceipt();closeDrawer();" disabled>Chek yaratish</button>
+</div>
+</div>
+
+<div class="modal" id="modal">
+<div class="mbox" id="modalContent"></div>
+</div>
+
+<div class="pin-modal" id="pinModal">
+<div class="pin-box">
+<div class="pin-title" id="pinTitle">Admin kirish</div>
+<div class="pin-sub" id="pinSub">PIN kiriting</div>
+<div class="pin-input-wrap">
+<input type="password" id="pinInput" class="pin-input" placeholder="••••••" maxlength="20">
+<button class="pin-go" onclick="pinSubmit()">→</button>
+</div>
+<div class="pin-numpad" id="pinNumpad">
+<button class="pin-key" onclick="pinKey('1')">1</button>
+<button class="pin-key" onclick="pinKey('2')">2</button>
+<button class="pin-key" onclick="pinKey('3')">3</button>
+<button class="pin-key" onclick="pinKey('4')">4</button>
+<button class="pin-key" onclick="pinKey('5')">5</button>
+<button class="pin-key" onclick="pinKey('6')">6</button>
+<button class="pin-key" onclick="pinKey('7')">7</button>
+<button class="pin-key" onclick="pinKey('8')">8</button>
+<button class="pin-key" onclick="pinKey('9')">9</button>
+<button class="pin-key empty"></button>
+<button class="pin-key" onclick="pinKey('0')">0</button>
+<button class="pin-key del" onclick="pinDel()">⌫</button>
+</div>
+<div class="pin-err" id="pinErr"></div>
+<button class="mbtn ghost" onclick="closePinModal()">Bekor qilish</button>
+</div>
+</div>
+
+<script>
+var FB_PROJECT="salqin";
+var FB_KEY="AIzaSyDl8f2tjiZLvSW-hCgLO03POLnP812o0MU";
+var FB_BASE="https://firestore.googleapis.com/v1/projects/"+FB_PROJECT+"/databases/(default)/documents/salqin";
+
+var PAYNET_URL="https://app.paynet.uz/qr-online/00020101021140440012qr-online.uz01186r0yPpz7rhN8pvUnwm0202115204531153038605802UZ5910AO'PAYNET'6008Tashkent610610002164280002uz0106PAYNET0208Toshkent80520012qr-online.uz03097120207070419marketing@paynet.uz63040B4E";
+
+var DEFAULT_MENU={"Taomlar":[{id:'ta1',name:'Osh',price:40000},{id:'ta2',name:"Lag'mon",price:45000},{id:'ta3',name:"Go'shsay",price:50000},{id:'ta4',name:'Tovuqsay',price:40000},{id:'ta5',name:'Jaz shashlik',price:22000},{id:'ta6',name:'Qiyma shashlik',price:12000},{id:'ta7',name:'Jigar shashlik',price:18000},{id:'ta8',name:'Tovuq shashlik',price:15000}],"Kareski":[{id:'ka1',name:'Kuksi',price:35000},{id:'ka2',name:'Akaroshka',price:35000},{id:'ka3',name:'Pegodi',price:15000}],"Ichimliklar":[{id:'ic1',name:'Coca cola 1.5L',price:16000},{id:'ic2',name:'Coca cola 1L',price:13000},{id:'ic3',name:'Coca cola 0.5L',price:8000},{id:'ic4',name:'Fanta 1.5L',price:16000},{id:'ic5',name:'Fanta 1L',price:13000},{id:'ic6',name:'Fanta 0.5L',price:8000},{id:'ic7',name:'Fuce tea',price:16000},{id:'ic8',name:'Sprite',price:13000},{id:'ic9',name:'Qora choy',price:5000},{id:'ic10',name:"Ko'k choy",price:5000}],"Mayda chuda":[{id:'ma1',name:'Non 0.5',price:6000},{id:'ma2',name:'Non 1',price:12000},{id:'ma3',name:'Kanteyner',price:1500}],"Salat":[{id:'sa1',name:'Achichu',price:5000},{id:'sa2',name:'Qatu',price:5000}],"Tekn":[{id:'te1',name:'Zubachiska',price:1},{id:'te2',name:'Tuz',price:1}]};
+
+var ST={menu:DEFAULT_MENU,orders:{},history:[],settings:{tableCount:8,pin:null},curTable:1,histFilter:'day',adminUnlocked:false,pinMode:'',pinFirst:''};
+
+function toFS(v){return {stringValue:JSON.stringify(v)};}
+function fromFS(d){try{return d.fields&&d.fields.data?JSON.parse(d.fields.data.stringValue):null;}catch(e){return null;}}
+async function fsGet(n){try{var r=await fetch(FB_BASE+"/"+n+"?key="+FB_KEY);if(!r.ok)return null;return fromFS(await r.json());}catch(e){return null;}}
+async function fsSet(n,v){try{await fetch(FB_BASE+"/"+n+"?key="+FB_KEY,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields:{data:toFS(v)}})});}catch(e){}}
+
+var pollTimer=null;
+function startPolling(){if(pollTimer)clearInterval(pollTimer);pollTimer=setInterval(async function(){var o=await fsGet("orders"),h=await fsGet("history"),s=await fsGet("settings"),m=await fsGet("menu");var ch=false;if(o&&JSON.stringify(o)!==JSON.stringify(ST.orders)){ST.orders=o;ch=true;}if(h&&JSON.stringify(h)!==JSON.stringify(ST.history)){ST.history=h;ch=true;}if(s&&JSON.stringify(s)!==JSON.stringify(ST.settings))ST.settings=s;if(m&&JSON.stringify(m)!==JSON.stringify(ST.menu)){ST.menu=m;ch=true;}if(ch)refreshUI();},4000);}
+
+function refreshUI(){ensureOrders();var a=document.querySelector('.tab-view.active');if(!a)return;if(a.id==='tabOrder'){renderTableBtns();renderMenuArea();renderCart();}if(a.id==='tabHistory')renderHistory();if(a.id==='tabAdmin')renderAdmin();}
+
+async function init(){var m=await fsGet("menu"),o=await fsGet("orders"),h=await fsGet("history"),s=await fsGet("settings");if(m)ST.menu=m;if(o)ST.orders=o;if(h)ST.history=h;if(s)ST.settings=s;ensureOrders();document.getElementById('loadingScreen').style.display='none';document.getElementById('appRoot').style.display='flex';renderOrder();startPolling();}
+
+function ensureOrders(){for(var i=1;i<=ST.settings.tableCount;i++)if(!ST.orders[i])ST.orders[i]=[];}
+
+function switchTab(t){if(t==='admin'){if(!ST.adminUnlocked){openPinModal('verify');return;}activateTab('admin');renderAdmin();return;}ST.adminUnlocked=false;activateTab(t);if(t==='order')renderOrder();else if(t==='history')renderHistory();}
+
+function activateTab(t){document.querySelectorAll('.tab-view').forEach(function(v){v.classList.remove('active');});['dNav','bNav'].forEach(function(p){document.querySelectorAll('[id^="'+p+'"]').forEach(function(b){b.classList.remove('active');});});var key=t.charAt(0).toUpperCase()+t.slice(1);var tv=document.getElementById('tab'+key);if(tv)tv.classList.add('active');var dn=document.getElementById('dNav'+key),bn=document.getElementById('bNav'+key);if(dn)dn.classList.add('active');if(bn)bn.classList.add('active');}
+
+function renderOrder(){renderTableBtns();renderMenuArea();renderCart();}
+
+function renderTableBtns(){var tb='';for(var i=1;i<=ST.settings.tableCount;i++){var has=ST.orders[i]&&ST.orders[i].length>0;tb+='<button class="table-btn'+(i==ST.curTable?' active':'')+(has?' has-items':'')+'" onclick="selectTable('+i+')">Stol '+i+'</button>';}tb+='<button class="add-tbl" onclick="switchTab(\'admin\')">+</button>';document.getElementById('tablesBar').innerHTML=tb;}
+
+function renderMenuArea(){var m='';for(var cat in ST.menu){if(!ST.menu[cat]||!ST.menu[cat].length)continue;m+='<div class="cat-block"><div class="cat-label">'+cat+'</div><div class="menu-grid">';ST.menu[cat].forEach(function(item){var order=ST.orders[ST.curTable]||[];var found=order.find(function(o){return o.id===item.id;});var qty=found?found.qty:0;m+='<div class="menu-item" onclick="addToCart(\''+cat+'\',\''+item.id+'\')">'+ (qty>0?'<div class="item-qty-badge">×'+qty+'</div>':'')+ '<div class="i-name">'+item.name+'</div>'+ '<div class="i-price">'+item.price.toLocaleString()+' so\'m</div></div>';});m+='</div></div>';}document.getElementById('menuArea').innerHTML=m;}
+
+function cartHTML(order){if(!order.length)return '<div class="cart-empty">— buyurtma yo\'q —</div>';return order.map(function(item,idx){return '<div class="cart-item">'+ '<div style="flex:1;min-width:0;"><div class="ci-name">'+item.name+'</div>'+ '<div class="ci-sub">'+(item.price*item.qty).toLocaleString()+' so\'m</div></div>'+ '<div class="cart-acts">'+ '<button class="qty-btn" onclick="changeQty('+idx+',-1)">−</button>'+ '<span class="qty-num">'+item.qty+'</span>'+ '<button class="qty-btn" onclick="changeQty('+idx+',1)">+</button>'+ '</div></div>';}).join('');}
+
+function renderCart(){var order=ST.orders[ST.curTable]||[];var total=order.reduce(function(a,b){return a+b.price*b.qty;},0);var totalQty=order.reduce(function(a,b){return a+b.qty;},0);var title='STOL №'+ST.curTable;var html=cartHTML(order);document.getElementById('dCartTitle').textContent=title;document.getElementById('dCartItems').innerHTML=html;document.getElementById('dTotalAmt').textContent=total.toLocaleString()+' so\'m';document.getElementById('dCheckoutBtn').disabled=!order.length;var cc=document.getElementById('dCartCount');cc.style.display=totalQty?'':'none';cc.textContent=totalQty+' ta';document.getElementById('drawerTitle').textContent=title+' — Savat';document.getElementById('drawerItems').innerHTML=html;document.getElementById('drawerTotal').textContent=total.toLocaleString()+' so\'m';document.getElementById('drawerCheckoutBtn').disabled=!order.length;var badge=document.getElementById('cartBadge');badge.style.display=totalQty?'flex':'none';badge.textContent=totalQty;var sl=document.getElementById('mStolLabel');if(sl)sl.textContent=title+(totalQty?' • '+totalQty+' ta':'');}
+
+function selectTable(n){ST.curTable=n;renderOrder();}
+
+function addToCart(cat,id){if(!ST.orders[ST.curTable])ST.orders[ST.curTable]=[];var item=ST.menu[cat].find(function(i){return i.id===id;});var exist=ST.orders[ST.curTable].find(function(i){return i.id===id;});if(exist)exist.qty++;else ST.orders[ST.curTable].push(Object.assign({},item,{qty:1}));fsSet("orders",ST.orders);renderOrder();}
+
+function changeQty(idx,val){ST.orders[ST.curTable][idx].qty+=val;if(ST.orders[ST.curTable][idx].qty<=0)ST.orders[ST.curTable].splice(idx,1);fsSet("orders",ST.orders);renderOrder();}
+
+function openDrawer(){document.getElementById('cartOverlay').classList.add('open');document.getElementById('cartDrawer').classList.add('open');}
+function closeDrawer(){document.getElementById('cartOverlay').classList.remove('open');document.getElementById('cartDrawer').classList.remove('open');}
+
+function makeQR(containerId){
+var el=document.getElementById(containerId);
+if(!el)return;
+el.innerHTML='';
+try{
+new QRCode(el,{text:PAYNET_URL,width:140,height:140,colorDark:"#1e293b",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M});
+}catch(e){
+el.innerHTML='<div style="width:140px;height:140px;background:#eff4ff;border-radius:10px;border:2px solid #dde3f0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;"><div style="font-size:2rem;">📱</div><div style="font-size:.65rem;color:#2563eb;font-weight:700;text-align:center;padding:0 8px;line-height:1.4;">PayNet orqali<br>to\'lang</div></div>';
+}
+}
+
+function openReceipt(){
+var order=ST.orders[ST.curTable]||[];
+if(!order.length)return;
+var total=order.reduce(function(a,b){return a+b.price*b.qty;},0);
+var now=new Date().toLocaleString('uz-UZ');
+var rows=order.map(function(i){return '<div class="rrow"><span>'+i.name+' ×'+i.qty+'</span><span>'+(i.price*i.qty).toLocaleString()+'</span></div>';}).join('');
+document.getElementById('modalContent').innerHTML='<div class="rl">SALQIN</div><div class="rs">'+now+'</div>'+'<div class="rtl">Stol №'+ST.curTable+'</div>'+'<hr class="rhr">'+rows+'<hr class="rhr">'+'<div class="rrow tot"><span>JAMI:</span><span>'+total.toLocaleString()+' so\'m</span></div>'+'<div class="qr-wrap"><div id="qrC"></div></div>'+'<button class="mbtn success" onclick="finalizeOrder('+total+',\''+now.replace(/'/g,"\'")+'\')">\u2713 Yakunlash</button>'+'<button class="mbtn ghost" onclick="closeModal()">Bekor</button>';
+openModal();
+setTimeout(function(){makeQR('qrC');},100);
+}
+
+function finalizeOrder(total,date){
+ST.history.push({id:Date.now(),t:ST.curTable,total:total,date:date,items:JSON.parse(JSON.stringify(ST.orders[ST.curTable]))});
+ST.orders[ST.curTable]=[];
+fsSet("orders",ST.orders);
+fsSet("history",ST.history);
+closeModal();
+renderOrder();
+}
+
+function setFilter(f){
+ST.histFilter=f;
+['Day','Week','Month','All'].forEach(function(x){document.getElementById('f'+x).classList.remove('active');});
+document.getElementById('f'+f.charAt(0).toUpperCase()+f.slice(1)).classList.add('active');
+renderHistory();
+}
+
+function getFiltered(){
+var now=new Date();
+return ST.history.filter(function(x){
+var d=new Date(x.id);
+if(ST.histFilter==='day')return d.toDateString()===now.toDateString();
+if(ST.histFilter==='week'){var w=new Date(now);w.setDate(now.getDate()-7);return d>=w;}
+if(ST.histFilter==='month')return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
+return true;
+});
+}
+
+function renderHistory(){
+var f=getFiltered();
+var tSum=f.reduce(function(a,b){return a+b.total;},0);
+var tQty=f.reduce(function(a,b){return a+b.items.reduce(function(c,d){return c+d.qty;},0);},0);
+var pm={day:'Bugun',week:'Bu hafta',month:'Bu oy',all:'Hammasi'};
+var html='<div class="summary-row">'+'<div class="sum-card"><div class="sum-lbl">'+pm[ST.histFilter]+'</div><div class="sum-val">'+f.length+'</div></div>'+'<div class="sum-card"><div class="sum-lbl">Jami savdo</div><div class="sum-val">'+tSum.toLocaleString()+' so\'m</div></div>'+'<div class="sum-card"><div class="sum-lbl">Mahsulotlar</div><div class="sum-val">'+tQty+'</div></div></div>';
+if(!f.length)html+='<div style="text-align:center;color:var(--muted);padding:36px;font-size:.84rem;">Bu davrda ma\'lumot yo\'q</div>';
+else{
+html+='<div class="htable-wrap"><table class="htable"><thead><tr><th>Sana</th><th>Stol</th><th class="hide-mob">Mahsulotlar</th><th>Jami</th></tr></thead><tbody>';
+f.slice().reverse().forEach(function(x){
+var names=x.items.map(function(i){return i.name+' ×'+i.qty;}).join(', ');
+html+='<tr onclick="viewDetail('+x.id+')"><td style="font-size:.73rem;">'+x.date+'</td><td><span class="badge">Stol '+x.t+'</span></td><td class="hide-mob" style="color:var(--muted);font-size:.72rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+names+'</td><td class="amt">'+x.total.toLocaleString()+'</td></tr>';
+});
+html+='</tbody></table></div>';
+}
+document.getElementById('histBody').innerHTML=html;
+}
+
+function viewDetail(id){
+var o=ST.history.find(function(x){return x.id===id;});
+if(!o)return;
+var rows=o.items.map(function(i){return '<div class="rrow"><span>'+i.name+' ×'+i.qty+'</span><span>'+(i.price*i.qty).toLocaleString()+'</span></div>';}).join('');
+document.getElementById('modalContent').innerHTML='<div class="rl">SALQIN</div><div class="rs">'+o.date+'</div><div class="rtl">Stol №'+o.t+'</div><hr class="rhr">'+rows+'<hr class="rhr"><div class="rrow tot"><span>JAMI:</span><span>'+o.total.toLocaleString()+' so\'m</span></div><div class="qr-wrap"><div id="qrD"></div></div><button class="mbtn success" onclick="exportSingleExcel('+o.id+')">⬇ Excel</button><button class="mbtn ghost" onclick="closeModal()">Yopish</button>';
+openModal();
+setTimeout(function(){makeQR('qrD');},100);
+}
+
+function exportExcel(){
+var f=getFiltered();
+if(!f.length){alert("Tarix bo'sh!");return;}
+var data=[['Sana','Mahsulot nomi','Soni','1 ta narxi (so\'m)','Umumiy narxi (so\'m)']];
+f.slice().reverse().forEach(function(x){
+x.items.forEach(function(i){
+data.push([x.date,i.name,i.qty,i.price,i.price*i.qty]);
+});
+});
+var ws=XLSX.utils.aoa_to_sheet(data);
+ws['!cols']=[{wch:18},{wch:22},{wch:8},{wch:18},{wch:18}];
+var wb=XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(wb,ws,'Tarix');
+var fname='SALQIN_Tarix_'+new Date().toISOString().slice(0,10)+'.xlsx';
+var wbout=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+var blob=new Blob([wbout],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+var url=URL.createObjectURL(blob);
+var a=document.createElement('a');
+a.href=url;
+a.download=fname;
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
+URL.revokeObjectURL(url);
+}
+
+function exportSingleExcel(id){
+var o=ST.history.find(function(x){return x.id===id;});
+if(!o)return;
+var data=[['Sana','Mahsulot nomi','Soni','1 ta narxi (so\'m)','Umumiy narxi (so\'m)']];
+o.items.forEach(function(i){
+data.push([o.date,i.name,i.qty,i.price,i.price*i.qty]);
+});
+var ws=XLSX.utils.aoa_to_sheet(data);
+ws['!cols']=[{wch:18},{wch:22},{wch:8},{wch:18},{wch:18}];
+var wb=XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(wb,ws,'Stol '+o.t);
+var fname='Stol_'+o.t+'_'+o.date.replace(/[/:,\s]/g,'')+'.xlsx';
+var wbout=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+var blob=new Blob([wbout],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+var url=URL.createObjectURL(blob);
+var a=document.createElement('a');
+a.href=url;
+a.download=fname;
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
+URL.revokeObjectURL(url);
+}
+
+function renderAdmin(){
+var dl=document.getElementById('catList');
+if(dl)dl.innerHTML=Object.keys(ST.menu).map(function(c){return '<option value="'+c+'">';}).join('');
+var list='';
+for(var cat in ST.menu){
+ST.menu[cat].forEach(function(item){
+list+='<div class="adm-li"><div><div class="adm-li-name">'+item.name+'</div><div class="adm-li-sub">'+cat+' • '+item.price.toLocaleString()+'</div></div><button class="del-btn" onclick="delItem(\''+cat+'\',\''+item.id+'\')">✕</button></div>';
+});
+}
+document.getElementById('adminMenuList').innerHTML=list||'<div style="color:var(--muted);font-size:.77rem;text-align:center;padding:14px;">Bo\'sh</div>';
+document.getElementById('tableCount').value=ST.settings.tableCount;
+document.getElementById('curTblCnt').textContent=ST.settings.tableCount;
+var today=new Date().toLocaleDateString('uz-UZ');
+var th=ST.history.filter(function(x){return new Date(x.id).toLocaleDateString('uz-UZ')===today;});
+var tt=th.reduce(function(a,b){return a+b.total;},0);
+var at=ST.history.reduce(function(a,b){return a+b.total;},0);
+document.getElementById('statsBlock').innerHTML='<div class="stat-row"><span class="sk">Bugun</span><span class="sv">'+th.length+' ta</span></div><div class="stat-row"><span class="sk">Bugun savdo</span><span class="sv">'+tt.toLocaleString()+' so\'m</span></div><div class="stat-row"><span class="sk">Jami</span><span class="sv">'+ST.history.length+' ta</span></div><div class="stat-row"><span class="sk">Umumiy savdo</span><span class="sv">'+at.toLocaleString()+' so\'m</span></div><div class="stat-row"><span class="sk">Menyu ta</span><span class="sv">'+Object.values(ST.menu).flat().length+' ta</span></div>';
+}
+
+function addMenuItem(){
+var cat=document.getElementById('newCat').value.trim();
+var name=document.getElementById('newName').value.trim();
+var price=parseInt(document.getElementById('newPrice').value);
+if(!cat||!name||!price||price<=0){alert("To'liq kiriting!");return;}
+if(!ST.menu[cat])ST.menu[cat]=[];
+ST.menu[cat].push({id:'m'+Date.now(),name:name,price:price});
+document.getElementById('newCat').value='';
+document.getElementById('newName').value='';
+document.getElementById('newPrice').value='';
+fsSet("menu",ST.menu);
+renderAdmin();
+}
+
+function delItem(cat,id){
+if(!confirm("O'chirilsinmi?"))return;
+ST.menu[cat]=ST.menu[cat].filter(function(i){return i.id!==id;});
+if(!ST.menu[cat].length)delete ST.menu[cat];
+fsSet("menu",ST.menu);
+renderAdmin();
+}
+
+function updateTableCount(){
+var n=parseInt(document.getElementById('tableCount').value);
+if(!n||n<1||n>30){alert("1-30!");return;}
+ST.settings.tableCount=n;
+if(ST.curTable>n)ST.curTable=1;
+fsSet("settings",ST.settings);
+renderAdmin();
+}
+
+function clearHistory(){
+if(!confirm("Tarixni tozalash?"))return;
+ST.history=[];
+fsSet("history",ST.history);
+renderAdmin();
+}
+
+function openPinModal(mode){
+ST.pinMode=mode;
+ST.pinFirst='';
+var titles={verify:"Admin kirish",setup1:"PIN o'rnatish",change1:"PIN o'zgartirish"};
+var subs={verify:"PIN kiriting",setup1:"Yangi PIN",change1:"Avvalgi PIN"};
+document.getElementById('pinTitle').textContent=titles[mode]||titles.verify;
+document.getElementById('pinSub').textContent=subs[mode]||subs.verify;
+document.getElementById('pinInput').value='';
+document.getElementById('pinErr').textContent='';
+document.getElementById('pinModal').classList.add('open');
+setTimeout(function(){document.getElementById('pinInput').focus();},100);
+}
+
+function closePinModal(){
+document.getElementById('pinModal').classList.remove('open');
+document.getElementById('pinInput').value='';
+}
+
+function pinKey(k){
+var inp=document.getElementById('pinInput');
+if(inp.value.length<20)inp.value+=k;
+}
+
+function pinDel(){
+var inp=document.getElementById('pinInput');
+inp.value=inp.value.slice(0,-1);
+}
+
+function pinSubmit(){
+var val=document.getElementById('pinInput').value.trim();
+var err=document.getElementById('pinErr');
+if(!val){err.textContent="PIN kiriting!";return;}
+if(ST.pinMode==='verify'){
+if(!ST.settings.pin){closePinModal();openPinModal('setup1');return;}
+if(val===ST.settings.pin){closePinModal();ST.adminUnlocked=true;activateTab('admin');renderAdmin();}
+else{err.textContent="Noto'g'ri!";document.getElementById('pinInput').value='';}
+}
+else if(ST.pinMode==='setup1'){
+ST.pinFirst=val;
+document.getElementById('pinInput').value='';
+document.getElementById('pinSub').textContent="Qayta kiriting";
+ST.pinMode='change3';
+}
+else if(ST.pinMode==='change3'){
+if(val===ST.pinFirst){
+ST.settings.pin=val;
+fsSet("settings",ST.settings);
+closePinModal();
+alert("O'zgartirildi!");
+}else{
+err.textContent="Mos kelmadi!";
+ST.pinFirst='';
+ST.pinMode='change2';
+document.getElementById('pinSub').textContent="Yangi PIN";
+document.getElementById('pinInput').value='';
+}
+}
+}
+
+function changePinPrompt(){openPinModal(ST.settings.pin?'change1':'setup1');}
+document.getElementById('pinInput').addEventListener('keydown',function(e){if(e.key==='Enter')pinSubmit();});
+
+function openModal(){document.getElementById('modal').classList.add('open');}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+init();
+</script>
+</body>
+</html>

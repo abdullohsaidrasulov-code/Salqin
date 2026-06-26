@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Kumush uchun ❤️</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --rose:  #E8295B;
+  --ink:   #1C1C2E;
+  --muted: #9A8F93;
+  --white: #FFFFFF;
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(160deg, #FDE8EE 0%, #F8E0E8 50%, #FCEEF2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+#heartCanvas { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+
+#quiz-wrap {
+  position: relative;
+  z-index: 1;
+  width: min(480px, 92vw);
+  padding: 28px 32px;
+  background: rgba(255,255,255,0.45);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-radius: 28px;
+  box-shadow: 0 8px 40px rgba(232,41,91,0.10), 0 1.5px 8px rgba(0,0,0,0.05);
+}
+
+@media (min-width: 700px) {
+  #quiz-wrap {
+    width: min(560px, 88vw);
+    padding: 40px 52px;
+  }
+  .intro-title { font-size: 38px; }
+  .intro-desc  { font-size: 16px; }
+  .q-text      { font-size: 28px; }
+  .btn, .btn-no { font-size: 16px; padding: 17px 38px; min-width: 240px; }
+  .heart-big   { font-size: 64px; }
+  .day-grid    { gap: 12px; }
+  .day-btn .dd { font-size: 20px; }
+  .ticket-name { font-size: 20px; }
+  .t-value     { font-size: 17px; }
+  .result-note { font-size: 18px; }
+}
+
+.screen { display: none; }
+.screen.active {
+  display: block;
+  animation: fadeUp .4s cubic-bezier(.22,.68,0,1.15) both;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(22px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+.heart-big {
+  text-align: center; font-size: 52px; margin-bottom: 18px;
+  display: block; animation: throb 1.9s ease-in-out infinite;
+}
+@keyframes throb {
+  0%,100% { transform: scale(1); }
+  50%      { transform: scale(1.12); }
+}
+.intro-label { font-size: 13px; color: var(--rose); font-weight: 500; text-align: center; margin-bottom: 6px; }
+.intro-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(26px, 7vw, 34px);
+  color: var(--ink); text-align: center; line-height: 1.25; margin-bottom: 10px;
+}
+.intro-desc { text-align: center; color: var(--muted); font-size: 14.5px; line-height: 1.6; margin-bottom: 28px; }
+
+.q-label {
+  text-align: center; font-size: 12px; font-weight: 600;
+  letter-spacing: 1.8px; text-transform: uppercase; color: #D4607F; margin-bottom: 10px;
+}
+.q-text {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(20px, 5.5vw, 26px);
+  color: var(--ink); text-align: center; line-height: 1.35; margin-bottom: 26px;
+}
+.progress-bar {
+  height: 3px; background: rgba(232,41,91,.15);
+  border-radius: 99px; margin-bottom: 24px; overflow: hidden;
+}
+.progress-fill {
+  height: 100%; background: linear-gradient(90deg, var(--rose), #FF6B95);
+  border-radius: 99px; transition: width .5s ease;
+}
+
+.btn {
+  display: block; width: auto; min-width: 220px; max-width: 92%;
+  padding: 15px 32px; margin: 10px auto;
+  border: none; border-radius: 50px; font-size: 15px;
+  font-family: 'Inter', sans-serif; font-weight: 500;
+  cursor: pointer; transition: transform .15s, box-shadow .15s;
+  text-align: center;
+}
+.btn:active { transform: scale(0.97) !important; }
+
+.btn-yes {
+  background: linear-gradient(135deg, #E8295B, #C4234F);
+  color: #fff; box-shadow: 0 6px 22px rgba(232,41,91,.38);
+}
+.btn-yes:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(232,41,91,.44); }
+.btn-yes:disabled { opacity: .4; pointer-events: none; }
+
+.no-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.btn-no {
+  display: inline-block;
+  width: auto;
+  min-width: 220px;
+  max-width: 92%;
+  padding: 15px 32px;
+  margin: 10px 0;
+  border: 1.5px solid rgba(232,41,91,.25);
+  border-radius: 50px;
+  background: var(--white);
+  color: var(--rose);
+  font-size: 15px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  cursor: default;
+  box-shadow: 0 2px 10px rgba(232,41,91,.07);
+  user-select: none;
+  text-align: center;
+  transition: transform .28s cubic-bezier(.22,.68,0,1.35);
+  will-change: transform;
+  position: relative;
+}
+
+.day-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.day-btn {
+  background: var(--white);
+  border: 1.5px solid rgba(232,41,91,.2);
+  border-radius: 14px;
+  padding: 10px 4px;
+  cursor: pointer;
+  text-align: center;
+  transition: all .2s;
+  font-family: 'Inter', sans-serif;
+}
+.day-btn .dn { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 3px; }
+.day-btn .dd { font-size: 17px; font-weight: 700; color: var(--ink); display: block; }
+.day-btn:hover { border-color: var(--rose); background: #FFF0F4; transform: translateY(-2px); box-shadow: 0 4px 14px rgba(232,41,91,.18); }
+.day-btn.selected { background: linear-gradient(135deg, #E8295B, #C4234F); border-color: transparent; box-shadow: 0 6px 18px rgba(232,41,91,.35); }
+.day-btn.selected .dn, .day-btn.selected .dd { color: #fff; }
+
+.result-label { font-family:'Playfair Display',serif; font-style:italic; font-size:22px; color:var(--rose); text-align:center; margin-bottom:4px; }
+.result-title { font-family:'Playfair Display',serif; font-size:clamp(26px,7vw,34px); color:var(--ink); text-align:center; margin-bottom:24px; }
+
+.ticket { background:var(--white); border-radius:20px; overflow:visible; box-shadow:0 12px 40px rgba(180,60,90,.15),0 2px 8px rgba(0,0,0,.06); margin-bottom:22px; position:relative; }
+.ticket-head { padding:18px 22px 16px; display:flex; align-items:center; gap:12px; border-bottom:1.5px dashed #EDD5DC; position:relative; }
+.ticket-head::before,.ticket-head::after { content:''; position:absolute; bottom:-13px; width:22px; height:22px; background:linear-gradient(160deg,#FDE8EE,#F8E0E8); border-radius:50%; border:1.5px solid #EDD5DC; }
+.ticket-head::before { left:-11px; } .ticket-head::after { right:-11px; }
+.ticket-icon { font-size:28px; flex-shrink:0; }
+.ticket-name { font-weight:700; font-size:18px; color:var(--rose); line-height:1.2; }
+.ticket-sub { font-size:11px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-top:2px; }
+.ticket-heart { margin-left:auto; font-size:22px; }
+.ticket-body { padding:20px 22px 18px; }
+.ticket-row { display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid #F5E8EC; }
+.ticket-row:last-child { border-bottom:none; }
+.t-label { font-size:10.5px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); }
+.t-value { font-size:15.5px; font-weight:700; color:var(--ink); text-align:right; }
+
+.result-note { font-family:'Playfair Display',serif; font-style:italic; font-size:16px; color:var(--ink); text-align:center; line-height:1.7; margin-bottom:10px; }
+.result-sig  { font-family:'Playfair Display',serif; font-style:italic; font-size:14px; color:var(--muted); text-align:center; }
+.replay-link { display:block; text-align:center; margin-top:18px; font-size:13px; color:var(--rose); text-decoration:underline; cursor:pointer; opacity:.75; }
+.replay-link:hover { opacity:1; }
+
+.burst { position:fixed; pointer-events:none; font-size:20px; animation:burstAnim .85s cubic-bezier(.22,1,.36,1) forwards; z-index:99; }
+@keyframes burstAnim {
+  0%   { transform:translate(0,0) scale(1.2); opacity:1; }
+  100% { transform:translate(var(--dx),var(--dy)) scale(0); opacity:0; }
+}
+</style>
+</head>
+<body>
+<canvas id="heartCanvas"></canvas>
+
+<div id="quiz-wrap">
+
+  <!-- INTRO -->
+  <div class="screen active" id="s-intro">
+    <span class="heart-big">💖</span>
+    <div class="intro-label">san uchun Kumushm ❤️</div>
+    <h1 class="intro-title">Kichkina kviz —<br>kotta 🧀 blan</h1>
+    <p class="intro-desc">Azgina sovollarim boridi oshalaga tori jovob ber. nu ehtyot bol qaysdr knopkala sani etkanini qmasligi mumkun </p>
+    <button class="btn btn-yes" onclick="goTo('s-q1')">Boshladi ✨</button>
+  </div>
+
+  <!-- SAVOL 1 -->
+  <div class="screen" id="s-q1">
+    <div class="progress-bar"><div class="progress-fill" style="width:16%"></div></div>
+    <div class="q-label">Savol 1 / 6</div>
+    <p class="q-text">Manga azgina vohtin bomi?</p>
+    <button class="btn btn-yes" onclick="goTo('s-q2')">daa, ne bomasakan 💕</button>
+    <div class="no-row">
+      <button class="btn-no">Band bo'lishim mumkun 🥱</button>
+      <button class="btn-no">Hmm, bilmadim</button>
+    </div>
+  </div>
+
+  <!-- SAVOL 2 -->
+  <div class="screen" id="s-q2">
+    <div class="progress-bar"><div class="progress-fill" style="width:32%"></div></div>
+    <div class="q-label">Savol 2 / 6</div>
+    <p class="q-text">Qaysi kun boramz?</p>
+    <div class="day-grid">
+      <button class="day-btn" onclick="selectDay(this,'Seshanba, 1-iyul')"><span class="dn">Se</span><span class="dd">1</span></button>
+      <button class="day-btn" onclick="selectDay(this,'Chorshanba, 2-iyul')"><span class="dn">Cho</span><span class="dd">2</span></button>
+      <button class="day-btn" onclick="selectDay(this,'Payshanba, 3-iyul')"><span class="dn">Pay</span><span class="dd">3</span></button>
+      <button class="day-btn" onclick="selectDay(this,'Juma, 4-iyul')"><span class="dn">Ju</span><span class="dd">4</span></button>
+      <button class="day-btn" onclick="selectDay(this,'Shanba, 5-iyul')"><span class="dn">Sha</span><span class="dd">5</span></button>
+    </div>
+    <button class="btn btn-yes" id="day-next-btn" disabled onclick="goTo('s-q3')">Davom ➜</button>
+  </div>
+
+  <!-- SAVOL 3 -->
+  <div class="screen" id="s-q3">
+    <div class="progress-bar"><div class="progress-fill" style="width:48%"></div></div>
+    <div class="q-label">Savol 3 / 6</div>
+    <p class="q-text">Birga qatka boramz?</p>
+    <button class="btn btn-yes" onclick="goTo('s-q4')"> Seul moon 🏰</button>
+    <div class="no-row">
+      <button class="btn-no">Yana oqshka 🙄</button>
+      <button class="btn-no">Hech qatga 🛋️</button>
+    </div>
+  </div>
+
+  <!-- SAVOL 4 -->
+  <div class="screen" id="s-q4">
+    <div class="progress-bar"><div class="progress-fill" style="width:64%"></div></div>
+    <div class="q-label">Savol 4 / 6</div>
+    <p class="q-text">Nima ko'ramiz?</p>
+    <button class="btn btn-yes" onclick="goTo('s-q5')">Lyuboy narsa 🎬</button>
+    <div class="no-row">
+      <button class="btn-no">tush koramz</button>
+      <button class="btn-no">Hech qachon kormimz! 😤</button>
+    </div>
+  </div>
+
+  <!-- SAVOL 5 — bu yerni o'zingiz to'ldiring -->
+  <div class="screen" id="s-q5">
+    <div class="progress-bar"><div class="progress-fill" style="width:80%"></div></div>
+    <div class="q-label">Savol 5 / 6</div>
+    <p class="q-text">Yana qatlaga boramz 😊</p>
+    <button class="btn btn-yes" onclick="goTo('s-q6')">Yeb ichkani 🥂✅</button>
+    <div class="no-row">
+      <button class="btn-no">Uyga 🏠</button>
+      <button class="btn-no">Compassga</button>
+    </div>
+  </div>
+
+  <!-- SAVOL 6 — bu yerni o'zingiz to'ldiring -->
+  <div class="screen" id="s-q6">
+    <div class="progress-bar"><div class="progress-fill" style="width:95%"></div></div>
+    <div class="q-label">Savol 6 / 6</div>
+    <p class="q-text">Hammasiga rozisanu a?</p>
+    <button class="btn btn-yes" onclick="goTo('s-result')"> 2martalab Roziman  ✅</button>
+    <div class="no-row">
+      <button class="btn-no">Ne rozi bolarkamman</button>
+      <button class="btn-no">hich qachon</button>
+    </div>
+  </div>
+
+  <!-- NATIJA -->
+  <div class="screen" id="s-result">
+    <div class="result-label">to'g'ri talladin gap yo💕</div>
+    <div class="result-title">Hammasi san uchun!</div>
+    <div class="ticket">
+      <div class="ticket-head">
+        <div class="ticket-icon">🎬</div>
+        <div>
+          <div class="ticket-name">Seul Moon</div>
+          <div class="ticket-sub">Ikki kishilik bilet</div>
+        </div>
+        <div class="ticket-heart">❤️</div>
+      </div>
+      <div class="ticket-body">
+        <div class="ticket-row">
+          <span class="t-label">Seans</span>
+          <span class="t-value">Lyuboy narsa 🎬</span>
+        </div>
+        <div class="ticket-row">
+          <span class="t-label">Qachon</span>
+          <span class="t-value" id="result-day">—</span>
+        </div>
+        <div class="ticket-row">
+          <span class="t-label">Joy</span>
+          <span class="t-value">yonimda ❤️</span>
+        </div>
+      </div>
+    </div>
+    <p class="result-note">Chiroyli bovogn,<br>qolgani mani ishm 💖</p>
+    <p class="result-sig">Lutfan — Abdulloh tomonidan</p>
+    <span class="replay-link" onclick="resetQuiz()">qaytattan toldrgin kesa prosto ustiga bos</span>
+  </div>
+
+</div>
+
+<script>
+const canvas = document.getElementById('heartCanvas');
+const ctx = canvas.getContext('2d');
+function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resize(); window.addEventListener('resize', resize);
+
+const HEART_CHARS = ['💗','💕','💖','❤️','🌸','✨'];
+const particles = [];
+class HeartParticle {
+  constructor() { this.reset(true); }
+  reset(init=false) {
+    this.x = Math.random()*canvas.width;
+    this.y = init ? Math.random()*canvas.height : canvas.height+30;
+    this.char = HEART_CHARS[Math.floor(Math.random()*HEART_CHARS.length)];
+    this.size = 12+Math.random()*18; this.speed = 0.5+Math.random()*0.8;
+    this.drift = (Math.random()-.5)*.5; this.alpha = 0;
+    this.maxAlpha = .35+Math.random()*.35; this.life = 0;
+    this.maxLife = (canvas.height+60)/this.speed;
+  }
+  update() {
+    this.life++; this.y -= this.speed; this.x += this.drift;
+    const t = this.life/this.maxLife;
+    this.alpha = t<.1?(t/.1)*this.maxAlpha:t>.8?((1-t)/.2)*this.maxAlpha:this.maxAlpha;
+    if(this.life>=this.maxLife) this.reset();
+  }
+  draw() { ctx.globalAlpha=this.alpha; ctx.font=`${this.size}px serif`; ctx.fillText(this.char,this.x,this.y); }
+}
+for(let i=0;i<28;i++) particles.push(new HeartParticle());
+(function loop(){ ctx.clearRect(0,0,canvas.width,canvas.height); particles.forEach(p=>{p.update();p.draw();}); ctx.globalAlpha=1; requestAnimationFrame(loop); })();
+
+let selectedDay = null;
+
+function selectDay(btn, dayText) {
+  document.querySelectorAll('.day-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedDay = dayText;
+  document.getElementById('day-next-btn').disabled = false;
+  const r = btn.getBoundingClientRect();
+  burst(r.left+r.width/2, r.top+r.height/2, 6);
+}
+
+function goTo(id) {
+  document.querySelectorAll('.btn-no').forEach(btn => {
+    btn.style.transition = 'none';
+    btn.style.transform = '';
+    btn._tx = 0; btn._ty = 0;
+    btn.onmouseenter = null; btn.ontouchstart = null;
+  });
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const scr = document.getElementById(id);
+  scr.classList.add('active');
+
+  if (id === 's-result' && selectedDay) {
+    document.getElementById('result-day').textContent = selectedDay;
+  }
+  burst(window.innerWidth/2, window.innerHeight/2, 10);
+
+  setTimeout(() => {
+    scr.querySelectorAll('.btn-no').forEach(btn => {
+      btn._tx = 0; btn._ty = 0;
+      btn.onmouseenter = () => flee(btn);
+      btn.ontouchstart = (e) => { e.preventDefault(); flee(btn); };
+    });
+  }, 50);
+}
+
+function flee(btn) {
+  const MARGIN = 16, STEP_X = 80, STEP_Y = 70;
+  const r = btn.getBoundingClientRect();
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let dx = (Math.random() - 0.5) * 2 * STEP_X;
+  let dy = (Math.random() - 0.5) * 2 * STEP_Y;
+  if (r.left + dx < MARGIN)        dx = MARGIN - r.left;
+  if (r.right + dx > vw - MARGIN)  dx = (vw - MARGIN) - r.right;
+  if (r.top + dy < MARGIN)         dy = MARGIN - r.top;
+  if (r.bottom + dy > vh - MARGIN) dy = (vh - MARGIN) - r.bottom;
+  btn._tx = (btn._tx || 0) + dx;
+  btn._ty = (btn._ty || 0) + dy;
+  btn.style.transition = 'transform .28s cubic-bezier(.22,.68,0,1.35)';
+  btn.style.transform  = `translate(${btn._tx}px, ${btn._ty}px)`;
+}
+
+function burst(cx, cy, n) {
+  for (let i = 0; i < n; i++) {
+    const el = document.createElement('div');
+    el.className = 'burst';
+    el.textContent = ['💖','💗','✨','❤️'][Math.floor(Math.random()*4)];
+    const angle = (Math.PI*2*i/n) + Math.random()*.6;
+    const dist  = 40 + Math.random()*80;
+    el.style.left = cx + 'px'; el.style.top = cy + 'px';
+    el.style.setProperty('--dx', Math.cos(angle)*dist + 'px');
+    el.style.setProperty('--dy', Math.sin(angle)*dist + 'px');
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 900);
+  }
+}
+
+function resetQuiz() {
+  selectedDay = null;
+  document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('day-next-btn').disabled = true;
+  goTo('s-intro');
+}
+</script>
+</body>
+</html>
